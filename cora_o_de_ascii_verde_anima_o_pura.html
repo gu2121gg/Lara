@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISTEMA AMOR_SYS - ONLINE</title>
+    <!-- Tailwind CSS para posicionamento e layout limpo -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;700&display=swap');
+        
+        body {
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            background-color: #030704;
+            color: #39ff14;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Efeito de brilho de fósforo verde clássico de monitores de tubo */
+        .terminal-glow {
+            text-shadow: 
+                0 0 2px rgba(57, 255, 20, 0.9),
+                0 0 8px rgba(57, 255, 20, 0.6),
+                0 0 15px rgba(57, 255, 20, 0.3);
+        }
+
+        /* Linhas de escaneamento de monitor CRT antigo */
+        .crt::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.04));
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+            z-index: 99;
+        }
+
+        /* Vinheta escura nos cantos da tela para profundidade */
+        .vignette {
+            box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.9);
+            pointer-events: none;
+        }
+
+        /* Cursor piscando do terminal */
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 15px;
+            background-color: #39ff14;
+            animation: blink 0.8s infinite steps(1);
+            vertical-align: middle;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="relative w-screen h-screen flex flex-col justify-between items-center crt bg-[#020503] select-none">
+
+    <!-- Moldura Decorativa do Terminal Cyberpunk -->
+    <div class="vignette absolute inset-0 z-30"></div>
+    
+    <!-- Linha Superior de Diagnóstico Minimalista -->
+    <header class="w-full max-w-7xl mx-auto px-6 py-4 flex justify-between items-center z-40 text-[10px] sm:text-xs opacity-80 uppercase tracking-widest terminal-glow">
+        <div class="flex items-center gap-3">
+            <span class="inline-flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+            <span>CORE_ESTÁVEL // SYS_L0V3_v2.06</span>
+        </div>
+        <div class="hidden sm:block">
+            <span>MODO_APRESENTAÇÃO: CORAÇÃO_MÁTRICA</span>
+        </div>
+        <div id="heartrate-indicator">
+            <span>F_CARDÍACA: <span id="bpm-val">74</span> BPM</span>
+        </div>
+    </header>
+
+    <!-- Canvas de Animação Principal -->
+    <main class="relative w-full flex-1 flex items-center justify-center z-20 overflow-hidden">
+        <canvas id="loveMatrixCanvas" class="absolute inset-0 w-full h-full"></canvas>
+    </main>
+
+    <!-- Rodapé de Terminal Interativo e Automatizado -->
+    <footer class="w-full max-w-4xl mx-auto px-6 py-6 z-40 text-left text-xs sm:text-sm font-medium tracking-wide opacity-90 terminal-glow border-t border-green-950/40 bg-[#020503]/80 backdrop-blur-sm">
+        <div class="flex flex-col gap-1.5">
+            <div class="text-green-600/70">> SYSTEM.LOG: PROCESSANDO VÍNCULO EMOCIONAL...</div>
+            <div class="flex items-center">
+                <span class="text-green-500 mr-2">> </span>
+                <span id="terminal-text" class="text-[#39ff14]"></span>
+                <span class="cursor"></span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('loveMatrixCanvas');
+        const ctx = canvas.getContext('2d');
+        const bpmVal = document.getElementById('bpm-val');
+        const terminalText = document.getElementById('terminal-text');
+
+        // Ajustar dimensões do canvas para ocupar a tela inteira
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Configurações do Efeito Matrix
+        const fontSize = 13;
+        let columns = Math.floor(canvas.width / fontSize);
+        let rainDrops = [];
+
+        // Inicializar posições verticais das quedas da chuva Matrix
+        function initMatrix() {
+            columns = Math.floor(canvas.width / fontSize);
+            rainDrops = [];
+            for (let x = 0; x < columns; x++) {
+                rainDrops[x] = Math.random() * -100;
+            }
+        }
+        initMatrix();
+        window.addEventListener('resize', initMatrix);
+
+        // Caracteres românticos misturados com binários para a chuva
+        const loveChars = ["♥", "♡", "L", "O", "V", "E", "1", "0", "A", "M", "O", "R", "N", "E", "O", "N", "H", "A", "C", "K"];
+
+        // Variáveis de batimento cardíaco
+        let lastBeatTime = 0;
+        let heartSizeModifier = 1.0;
+        let currentBpm = 72;
+
+        // Fórmula matemática para detectar se um ponto (x, y) está dentro do coração
+        function isInsideHeart(col, row, width, height, pulseScale) {
+            // Normalizar coordenadas (0,0 no centro da tela)
+            const centerX = width / 2;
+            const centerY = height / 2 - 20; // Ajuste fino vertical do centro
+            
+            // Fator de escala adaptativo dependendo do tamanho da tela
+            const baseScale = Math.min(width, height) / 28;
+            const scale = baseScale * pulseScale;
+
+            // Converter pixel para unidade matemática da fórmula
+            const x = (col * fontSize - centerX) / scale;
+            const y = -(row * fontSize - centerY) / (scale * 0.95); // Escala proporcional mono
+
+            // Equação clássica implícita do coração de 6ª ordem:
+            // (x^2 + y^2 - 1)^3 - x^2 * y^3 <= 0
+            const x2 = x * x;
+            const y2 = y * y;
+            const term = x2 + y2 - 1;
+            const equation = (term * term * term) - (x2 * y * y2);
+
+            return equation <= 0;
+        }
+
+        function draw() {
+            // Efeito fade out clássico do Matrix para deixar rastro
+            ctx.fillStyle = 'rgba(2, 5, 3, 0.15)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Calcular a pulsação do coração usando uma curva senoidal refinada imitando batidas sistólica/diastólica
+            const now = Date.now();
+            const timeInBeat = (now % (60000 / currentBpm)); // ciclo da batida baseada no BPM
+            const beatNormalized = timeInBeat / (60000 / currentBpm);
+            
+            // Simulação de batimento cardíaco duplo (lub-dub)
+            if (beatNormalized < 0.15) {
+                heartSizeModifier = 1.0 + Math.sin(beatNormalized * Math.PI / 0.15) * 0.14; // Primeira batida (forte)
+            } else if (beatNormalized >= 0.2 && beatNormalized < 0.35) {
+                heartSizeModifier = 1.0 + Math.sin((beatNormalized - 0.2) * Math.PI / 0.15) * 0.07; // Segunda batida (suave)
+            } else {
+                heartSizeModifier = 1.0; // Estado relaxado
+            }
+
+            // Desenhar os fluxos de código
+            ctx.font = `bold ${fontSize}px monospace`;
+
+            for (let i = 0; i < rainDrops.length; i++) {
+                // Selecionar caractere aleatório
+                const char = loveChars[Math.floor(Math.random() * loveChars.length)];
+                const colX = i * fontSize;
+                const rowY = rainDrops[i] * fontSize;
+
+                // Detectar se o caractere atual está dentro ou fora da geometria do coração pulsante
+                const inside = isInsideHeart(i, rainDrops[i], canvas.width, canvas.height, heartSizeModifier);
+
+                if (inside) {
+                    // Caracteres dentro do coração: Verde Neon Ultra-Brilhante com sombra brilhante
+                    ctx.fillStyle = '#66ff66';
+                    ctx.shadowColor = '#39ff14';
+                    ctx.shadowBlur = 12;
+                    // Força símbolos românticos com maior frequência no interior do coração
+                    const heartChar = Math.random() > 0.4 ? "♥" : char;
+                    ctx.fillText(heartChar, colX, rowY);
+                } else {
+                    // Caracteres fora do coração: Matrix sutil com verde escuro padrão (sem brilho intenso)
+                    ctx.fillStyle = 'rgba(0, 80, 0, 0.35)';
+                    ctx.shadowBlur = 0;
+                    ctx.fillText(char, colX, rowY);
+                }
+
+                // Resetar queda da coluna se ultrapassar a tela
+                if (rowY > canvas.height && Math.random() > 0.98) {
+                    rainDrops[i] = 0;
+                }
+                
+                // Mover queda
+                rainDrops[i]++;
+            }
+
+            // Desligar o desfoque de sombra para elementos normais no próximo loop
+            ctx.shadowBlur = 0;
+
+            // Flutuação natural e imperceptível do BPM cardíaco para aumentar o realismo
+            if (now - lastBeatTime > 2500) {
+                currentBpm = Math.floor(70 + Math.random() * 14);
+                bpmVal.textContent = currentBpm;
+                lastBeatTime = now;
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        // Iniciar loop de animação
+        draw();
+
+        // Diálogos de amor cibernéticos para serem digitados de forma procedural
+        const romanticDialogs = [
+            "SCANNING HEART... CONEXÃO CRIPTOGRAFADA DETECTADA.",
+            "PROT_AMOR_COMPILADO: 0 ERROS, 0 AVISOS.",
+            "VOCÊ É O CÓDIGO FONTE DA MINHA FELICIDADE.",
+            "AVISO: NÍVEL DE AMOR EXCEDE O LIMITE DO BUFFER (100%++).",
+            "EXECUTANDO: AMAR_VOCE_PARA_SEMPRE.EXE...",
+            "ANALISANDO COMPATIBILIDADE... RESULTADO: PAR PERFEITO.",
+            "SISTEMA OPERACIONAL ESTÁVEL. NÚCLEO EMOCIONAL AQUECIDO.",
+            "MENSAGEM: MEU AMOR POR VOCÊ É UM LOOP INFINITO SEM CLAUSULA DE SAÍDA.",
+            "PING AMOR_CENTRAL... RESPOSTA: 1ms (MUITO PRÓXIMOS)."
+        ];
+
+        let dialogIndex = 0;
+        let charIndex = 0;
+        let isDeleting = false;
+
+        function typeTerminalEffect() {
+            const currentString = romanticDialogs[dialogIndex];
+            
+            if (isDeleting) {
+                // Apagando caracteres
+                terminalText.textContent = currentString.substring(0, charIndex - 1);
+                charIndex--;
+            } else {
+                // Digitando caracteres
+                terminalText.textContent = currentString.substring(0, charIndex + 1);
+                charIndex++;
+            }
+
+            // Definir tempos de digitação
+            let typingSpeed = isDeleting ? 30 : 60;
+
+            if (!isDeleting && charIndex === currentString.length) {
+                // Pausa quando a frase inteira for digitada
+                typingSpeed = 3500;
+                isDeleting = true;
+            } else if (isDeleting && charIndex === 0) {
+                isDeleting = false;
+                dialogIndex = (dialogIndex + 1) % romanticDialogs.length;
+                typingSpeed = 500; // Tempo antes de começar a próxima
+            }
+
+            setTimeout(typeTerminalEffect, typingSpeed);
+        }
+
+        // Iniciar máquina de escrever do rodapé
+        setTimeout(typeTerminalEffect, 1000);
+
+        // Permitir que ao tocar na tela ou mover o mouse faça o coração bater acelerado temporariamente (Interatividade sutil)
+        function speedUpHeart() {
+            currentBpm = 110;
+            bpmVal.textContent = currentBpm;
+            lastBeatTime = Date.now() + 1500; // Mantém alto por 1.5s
+        }
+        window.addEventListener('mousemove', (e) => {
+            if (Math.random() > 0.985) speedUpHeart();
+        });
+        window.addEventListener('touchstart', speedUpHeart);
+    </script>
+</body>
+</html>
