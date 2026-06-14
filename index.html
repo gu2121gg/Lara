@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QUANTUM_HEART_SINGULARITY v9.0</title>
-    <!-- Tailwind CSS para posicionamento e interface futurista minimalista -->
+    <title>SINAL_THAY_DETECTADO</title>
+    <!-- Tailwind CSS apenas para posicionamento básico -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
@@ -18,232 +18,46 @@
             padding: 0;
         }
 
-        /* Título em fonte sci-fi moderna */
+        /* Título e elementos centrais em fonte sci-fi moderna */
         .title-font {
             font-family: 'Orbitron', sans-serif;
         }
 
-        /* Brilho verde neon ultra intenso (Efeito Fósforo Quântico) */
-        .quantum-glow {
-            text-shadow: 
-                0 0 5px rgba(0, 255, 102, 0.8),
-                0 0 15px rgba(0, 255, 102, 0.4),
-                0 0 30px rgba(0, 255, 102, 0.2);
-        }
-
+        /* Scanlines de monitor CRT clássico para textura retrô */
         .crt-scanlines::after {
             content: " ";
             display: block;
             position: absolute;
             top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
             background-size: 100% 4px;
             pointer-events: none;
             z-index: 99;
         }
 
-        /* Efeito de vinheta radial profunda para foco no centro */
+        /* Vinheta radial profunda para focar os olhos no centro */
         .vignette {
-            background: radial-gradient(circle, rgba(2, 5, 3, 0.1) 30%, rgba(1, 3, 2, 0.95) 100%);
+            background: radial-gradient(circle, rgba(2, 5, 3, 0.1) 20%, rgba(1, 3, 2, 0.98) 100%);
             pointer-events: none;
-        }
-
-        /* Transição suave para botões quânticos */
-        .quantum-btn {
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .quantum-btn:hover {
-            box-shadow: 0 0 20px rgba(0, 255, 102, 0.4);
-            background-color: rgba(0, 255, 102, 0.15);
         }
     </style>
 </head>
-<body class="relative w-screen h-screen flex flex-col justify-between crt-scanlines bg-[#020503] select-none overflow-hidden">
+<body class="relative w-screen h-screen crt-scanlines bg-[#020503] select-none overflow-hidden flex items-center justify-center">
 
     <div class="vignette absolute inset-0 z-30"></div>
     
-    <!-- INTERFACE FLUTUANTE HUD (HUD SUPERIOR) -->
-    <header class="w-full p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 z-40 absolute top-0 left-0">
-        <div class="flex flex-col gap-1">
-            <div class="flex items-center gap-3">
-                <div class="relative flex h-3 w-3">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ff66] opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-3 w-3 bg-[#00ff66]"></span>
-                </div>
-                <h1 class="title-font font-black tracking-widest text-lg text-[#00ff66] quantum-glow">
-                    SINGULARIDADE QUÂNTICA v9.0
-                </h1>
-            </div>
-            <p class="text-[10px] text-[#00ff66]/50 tracking-widest font-mono">
-                SISTEMA DE MAPEAMENTO INTERATIVO DE ATRAÇÃO GRAVITACIONAL
-            </p>
-        </div>
+    <!-- Canvas que cobre toda a tela -->
+    <canvas id="quantumCanvas" class="absolute inset-0 w-full h-full z-20 cursor-crosshair"></canvas>
 
-        <!-- CONTROLES QUÂNTICOS DE ESTADO -->
-        <div class="flex items-center gap-2 bg-[#020503]/80 border border-[#00ff66]/20 p-1.5 rounded-lg backdrop-blur-md">
-            <button onclick="setQuantumMode('entanglement')" id="btn-entanglement" class="quantum-btn px-3 py-1 text-[10px] uppercase rounded font-bold text-white bg-[#00ff66]/20 border border-[#00ff66]/40">
-                Emaranhamento
-            </button>
-            <button onclick="setQuantumMode('singularity')" id="btn-singularity" class="quantum-btn px-3 py-1 text-[10px] uppercase rounded font-bold text-[#00ff66]/60 hover:text-white">
-                Singularidade
-            </button>
-            <button onclick="setQuantumMode('supernova')" id="btn-supernova" class="quantum-btn px-3 py-1 text-[10px] uppercase rounded font-bold text-[#00ff66]/60 hover:text-white">
-                Supernova
-            </button>
-        </div>
-    </header>
-
-    <!-- ÁREA CENTRAL DO ATRACTOR QUANTUM (CANVAS PRINCIPAL) -->
-    <main class="relative w-full flex-1 flex items-center justify-center z-20 cursor-crosshair">
-        
-        <!-- Texto explicativo discreto -->
-        <div class="absolute top-24 text-center text-[10px] tracking-widest uppercase text-[#00ff66]/40 pointer-events-none">
-            « DISTORÇA O ESPAÇO-TEMPO USANDO O MOUSE OU O TOQUE »
-        </div>
-
-        <canvas id="quantumCanvas" class="w-full h-full"></canvas>
-
-        <!-- Anéis de flutuação quântica centralizados -->
-        <div class="absolute border border-[#00ff66]/5 rounded-full w-[450px] h-[450px] pointer-events-none animate-spin" style="animation-duration: 25s;"></div>
-        <div class="absolute border border-dashed border-[#00ff66]/10 rounded-full w-[300px] h-[300px] pointer-events-none animate-spin" style="animation-duration: 15s; animation-direction: reverse;"></div>
-
-        <!-- BOTÃO PARA INICIAR SINTETIZADOR DE ÁUDIO -->
-        <div class="absolute bottom-8 z-40 flex flex-col items-center gap-2">
-            <button id="audio-toggle" onclick="toggleSynth()" class="quantum-btn px-6 py-2 border-2 border-[#00ff66] bg-[#020503]/90 rounded-full text-xs font-bold tracking-widest uppercase text-[#00ff66] shadow-[0_0_15px_rgba(0,255,102,0.1)] hover:scale-105 active:scale-95">
-                ✦ SINCRONIZAR SINTETIZADOR AMBIENTE
-            </button>
-            <p id="synth-status" class="text-[9px] text-[#00ff66]/40 uppercase tracking-wider">ÁUDIO DESCONECTADO // CLIQUE PARA ATIVAR</p>
-        </div>
-    </main>
-
-    <!-- RODAPÉ TERMINAL DE POESIA NEURAL -->
-    <footer class="w-full p-6 z-40 relative bottom-0 left-0 bg-[#020503]/90 border-t border-[#00ff66]/10 backdrop-blur-md">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 text-xs font-mono">
-            <div class="flex items-center gap-3">
-                <span class="text-[#00ff66] font-bold quantum-glow">> ANALISADOR_NEURAL:</span>
-                <span id="poetry-text" class="text-white">ALINHANDO COORDENADAS COGNITIVAS...</span>
-                <span class="inline-block w-2 h-4 bg-[#00ff66] animate-pulse"></span>
-            </div>
-            
-            <div class="flex items-center gap-6 text-[10px] text-[#00ff66]/50 uppercase tracking-widest">
-                <div>ESTABILIDADE_VÍNCULO: <span class="text-white font-bold animate-pulse">∞%</span></div>
-                <div>GRAVIDADE_NÚCLEO: <span id="gravity-display" class="text-white font-bold">1.00G</span></div>
-            </div>
-        </div>
-    </footer>
+    <!-- Anéis orbitais finos ao redor do nome central -->
+    <div class="absolute border border-[#00ff66]/5 rounded-full w-[380px] h-[380px] pointer-events-none animate-spin z-10" style="animation-duration: 25s;"></div>
+    <div class="absolute border border-dashed border-[#00ff66]/10 rounded-full w-[260px] h-[260px] pointer-events-none animate-spin z-10" style="animation-duration: 15s; animation-direction: reverse;"></div>
 
     <script>
-        // Classe inovadora para geração de síntese de som ambiente baseada no Web Audio API
-        class QuantumSynthesizer {
-            constructor() {
-                this.ctx = null;
-                this.droneOsc = null;
-                this.harmonicOsc = null;
-                this.filter = null;
-                this.gainNode = null;
-                this.lfo = null;
-                this.isActive = false;
-            }
-
-            init() {
-                try {
-                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    
-                    // Criando filtros e ganhos para um som aconchegante e cinemático (sem ruídos estourados)
-                    this.gainNode = this.ctx.createGain();
-                    this.gainNode.gain.setValueAtTime(0.08, this.ctx.currentTime); // Volume confortável
-
-                    this.filter = this.ctx.createBiquadFilter();
-                    this.filter.type = 'lowpass';
-                    this.filter.frequency.setValueAtTime(350, this.ctx.currentTime);
-                    this.filter.Q.setValueAtTime(3, this.ctx.currentTime);
-
-                    // Drone de sub-graves estável (Amor estável)
-                    this.droneOsc = this.ctx.createOscillator();
-                    this.droneOsc.type = 'sawtooth';
-                    this.droneOsc.frequency.setValueAtTime(65.41, this.ctx.currentTime); // Nota C2
-
-                    // Oscilador harmônico flutuante (frequências cristalinas)
-                    this.harmonicOsc = this.ctx.createOscillator();
-                    this.harmonicOsc.type = 'sine';
-                    this.harmonicOsc.frequency.setValueAtTime(130.81, this.ctx.currentTime); // Nota C3
-
-                    // LFO para criar sensação de respiração cósmica
-                    this.lfo = this.ctx.createOscillator();
-                    this.lfo.frequency.setValueAtTime(0.2, this.ctx.currentTime); // Respiração bem lenta (0.2 Hz)
-                    const lfoGain = this.ctx.createGain();
-                    lfoGain.gain.setValueAtTime(150, this.ctx.currentTime);
-
-                    // Conexões
-                    this.lfo.connect(lfoGain);
-                    lfoGain.connect(this.filter.frequency); // Modula a abertura do filtro dinamicamente
-
-                    this.droneOsc.connect(this.filter);
-                    this.harmonicOsc.connect(this.filter);
-                    this.filter.connect(this.gainNode);
-                    this.gainNode.connect(this.ctx.destination);
-
-                    // Inicializar osciladores
-                    this.lfo.start();
-                    this.droneOsc.start();
-                    this.harmonicOsc.start();
-                    this.isActive = true;
-                    
-                    document.getElementById('synth-status').textContent = "SINTETIZADOR SINCRO: ATIVO // SOM ESPACIAL CONECTADO";
-                    document.getElementById('synth-status').classList.remove('text-[#00ff66]/40');
-                    document.getElementById('synth-status').classList.add('text-[#00ff66]');
-                    document.getElementById('audio-toggle').textContent = "✦ MUTAR SINTETIZADOR AMBIENTE";
-                } catch(e) {
-                    console.error("Erro ao inicializar AudioContext: ", e);
-                }
-            }
-
-            // Atualiza o som de acordo com a velocidade das partículas e proximidade do mouse
-            updateFreqs(mouseX, mouseY, width, height, pulseFactor) {
-                if (!this.isActive || !this.ctx) return;
-                
-                // Normaliza a posição do mouse de 0 a 1
-                const nx = Math.max(0, Math.min(1, mouseX / width));
-                const ny = Math.max(0, Math.min(1, mouseY / height));
-
-                // Mapeia a posição do mouse para frequências harmônicas complementares
-                const baseFreq = 65.41 + (nx * 20); // Altera o tom suavemente no eixo X
-                const harmonicFreq = (baseFreq * 2) + (ny * 100); // Cria agudos brilhantes no eixo Y
-
-                this.droneOsc.frequency.setTargetAtTime(baseFreq, this.ctx.currentTime, 0.3);
-                this.harmonicOsc.frequency.setTargetAtTime(harmonicFreq, this.ctx.currentTime, 0.3);
-
-                // Abre e fecha o filtro com a pulsação natural do coração
-                const filterFreq = 200 + (pulseFactor * 400);
-                this.filter.frequency.setTargetAtTime(filterFreq, this.ctx.currentTime, 0.1);
-            }
-
-            stop() {
-                if (this.ctx) {
-                    this.ctx.close();
-                    this.ctx = null;
-                }
-                this.isActive = false;
-                document.getElementById('synth-status').textContent = "ÁUDIO DESCONECTADO // CLIQUE PARA RECONECTAR";
-                document.getElementById('synth-status').classList.remove('text-[#00ff66]');
-                document.getElementById('synth-status').classList.add('text-[#00ff66]/40');
-                document.getElementById('audio-toggle').textContent = "✦ SINCRONIZAR SINTETIZADOR AMBIENTE";
-            }
-        }
-
-        const synth = new QuantumSynthesizer();
-
-        function toggleSynth() {
-            if (synth.isActive) {
-                synth.stop();
-            } else {
-                synth.init();
-            }
-        }
-
         const canvas = document.getElementById('quantumCanvas');
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { alpha: false });
 
+        // Redimensionamento inteligente do canvas
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -251,9 +65,14 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        let mouse = { x: canvas.width / 2, y: canvas.height / 2, active: false, targetX: canvas.width / 2, targetY: canvas.height / 2 };
+        let mouse = { 
+            x: canvas.width / 2, 
+            y: canvas.height / 2, 
+            active: false, 
+            targetX: canvas.width / 2, 
+            targetY: canvas.height / 2 
+        };
 
-        // Captura de mouse e toque adaptada
         function updateMouseCoords(e) {
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -263,53 +82,51 @@
         }
 
         window.addEventListener('mousemove', updateMouseCoords);
-        window.addEventListener('touchmove', updateMouseCoords);
+        window.addEventListener('touchmove', updateMouseCoords, { passive: true });
         window.addEventListener('touchstart', (e) => {
             updateMouseCoords(e);
             mouse.x = mouse.targetX;
             mouse.y = mouse.targetY;
-        });
+        }, { passive: true });
         window.addEventListener('mouseleave', () => { mouse.active = false; });
         window.addEventListener('touchend', () => { mouse.active = false; });
 
-        // Pool de caracteres ASCII que representam fórmulas, termos românticos e dados quânticos
+        // Pool de caracteres ASCII verdes
         const asciiCharacters = [
-            '♥', '∞', 'L', 'O', 'V', 'E', 'A', 'M', 'O', 'R', 'S', 'I', 'N', 'G', 'U', 'L', 'A', 'R', 'I', 'T', 'Y', 
-            '1', '0', 'ψ', 'φ', 'Δ', '∇', '★', '☼', '⚙', '✦', '☄', '⚛'
+            '♥', '∞', 'L', 'O', 'V', 'E', 'T', 'H', 'A', 'Y', 'M', 'O', 'R', '1', '0', 'ψ', 'φ', '✦', '⚛'
         ];
 
-        // Equação matemática de distorção de coração (Implicit Heart Function)
-        // Usada para criar um campo de atração vetorial orgânico e preciso
-        function getHeartTarget(index, total, scale) {
-            // Ângulo uniforme
-            const angle = (index / total) * Math.PI * 2;
-            
-            // Equação clássica de coração paramétrico
-            // x = 16 * sin^3(t)
-            // y = 13 * cos(t) - 5 * cos(2t) - 2 * cos(3t) - cos(4t)
-            const x = 16 * Math.pow(Math.sin(angle), 3);
-            const y = -(13 * Math.cos(angle) - 5 * Math.cos(2 * angle) - 2 * Math.cos(3 * angle) - Math.cos(4 * angle));
-            
-            return {
-                x: x * scale,
-                y: y * scale
-            };
-        }
+        // Total otimizado de partículas para fluidez de 60fps
+        const particleCount = 1400; 
+        const heartTargetsPrecalculated = new Float32Array(particleCount * 2);
 
-        // Configuração de Partículas Quânticas
-        const particleCount = 1800;
+        function precalculateHeartTargets() {
+            for (let i = 0; i < particleCount; i++) {
+                const angle = (i / particleCount) * Math.PI * 2;
+                
+                // Fórmula clássica do coração
+                const x = 16 * Math.pow(Math.sin(angle), 3);
+                const y = -(13 * Math.cos(angle) - 5 * Math.cos(2 * angle) - 2 * Math.cos(3 * angle) - Math.cos(4 * angle));
+                
+                heartTargetsPrecalculated[i * 2] = x;
+                heartTargetsPrecalculated[i * 2 + 1] = y;
+            }
+        }
+        precalculateHeartTargets();
+
         const particles = [];
-        let currentMode = 'entanglement'; // Modos: entanglement, singularity, supernova
 
         class QuantumParticle {
-            constructor(index) {
+            constructor(index, discreteSize) {
                 this.index = index;
                 this.reset(true);
-                // Caractere ASCII exclusivo deste nó quântico
                 this.char = asciiCharacters[index % asciiCharacters.length];
-                this.size = 8 + Math.random() * 8;
-                // Velocidade de pulsação individual do nó
+                this.size = discreteSize; 
                 this.glowOffset = Math.random() * Math.PI * 2;
+                
+                // Vetores do mapa de atração
+                this.targetXOffset = heartTargetsPrecalculated[index * 2];
+                this.targetYOffset = heartTargetsPrecalculated[index * 2 + 1];
             }
 
             reset(fullReset = false) {
@@ -317,7 +134,6 @@
                     this.x = Math.random() * canvas.width;
                     this.y = Math.random() * canvas.height;
                 } else {
-                    // Renasce na borda ou próximo ao centro
                     const angle = Math.random() * Math.PI * 2;
                     const r = Math.min(canvas.width, canvas.height) * 0.8;
                     this.x = canvas.width / 2 + Math.cos(angle) * r;
@@ -326,116 +142,92 @@
                 this.vx = (Math.random() - 0.5) * 2;
                 this.vy = (Math.random() - 0.5) * 2;
                 this.alpha = 0.2 + Math.random() * 0.8;
-                this.speedLimit = 4 + Math.random() * 4;
+                this.speedLimit = 4 + Math.random() * 3;
             }
 
-            update(centerX, centerY, scale, pulse, time) {
-                // Obter coordenada ideal de atração no coração
-                const target = getHeartTarget(this.index, particleCount, scale * pulse);
-                const targetX = centerX + target.x;
-                const targetY = centerY + target.y;
+            update(centerX, centerY, scale, pulse) {
+                const targetFactor = scale * pulse;
+                const targetX = centerX + this.targetXOffset * targetFactor;
+                const targetY = centerY + this.targetYOffset * targetFactor;
 
-                // Força de atração gravitacional quântica em direção ao contorno do coração
                 let dx = targetX - this.x;
                 let dy = targetY - this.y;
-                let dist = Math.hypot(dx, dy);
+                let distSq = dx * dx + dy * dy;
 
-                // Constantes físicas adaptadas para o modo quântico selecionado
-                let gravityConstant = 0.008;
-                let fluidOrbitForce = 0.002;
-                let drag = 0.95;
+                let gravityConstant = 0.009;
+                let fluidOrbitForce = 0.0025;
+                let drag = 0.94;
 
-                if (currentMode === 'singularity') {
-                    gravityConstant = 0.05; // Puxão gravitacional violento e estético
-                    drag = 0.89;
-                } else if (currentMode === 'supernova') {
-                    // Explode e repele temporariamente usando o tempo cósmico
-                    gravityConstant = -0.01 * Math.sin(time * 0.5); 
-                    drag = 0.97;
-                }
-
-                // Aplica atração gravitacional
                 this.vx += dx * gravityConstant;
                 this.vy += dy * gravityConstant;
 
-                // Força orbital (turbulência em formato de vórtice para dar o efeito de fluido vivo)
-                // Faz as letras deslizarem perfeitamente pelas curvas do coração
-                const ox = -dy / (dist + 1);
-                const oy = dx / (dist + 1);
+                // Efeito orbital sutil de vórtice
+                const dist = Math.sqrt(distSq) + 1;
+                const ox = -dy / dist;
+                const oy = dx / dist;
                 this.vx += ox * dist * fluidOrbitForce;
                 this.vy += oy * dist * fluidOrbitForce;
 
-                // INTERAÇÃO DE LENTE GRAVITACIONAL (Buraco Negro no cursor)
+                // Atração gravitacional interativa do cursor/toque
                 if (mouse.active) {
                     const mdx = this.x - mouse.x;
                     const mdy = this.y - mouse.y;
-                    const mdist = Math.hypot(mdx, mdy);
+                    const mdistSq = mdx * mdx + mdy * mdy;
 
-                    if (mdist < 220) {
-                        // Distorção espacial do espaço-tempo:
-                        // Partículas distantes orbitam, próximas são repelidas ou rotacionadas intensamente
+                    if (mdistSq < 48400) { // Raio de efeito
+                        const mdist = Math.sqrt(mdistSq) + 0.01;
                         const lensForce = (220 - mdist) / 220;
                         
-                        // Direção orbital do cursor
-                        const mox = -mdy / (mdist + 1);
-                        const moy = mdx / (mdist + 1);
+                        const mox = -mdy / mdist;
+                        const moy = mdx / mdist;
 
-                        this.vx += mox * lensForce * 8;
-                        this.vy += moy * lensForce * 8;
+                        this.vx += mox * lensForce * 6;
+                        this.vy += moy * lensForce * 6;
                         
-                        // Força de atração/repulsão radial sutil
-                        this.vx += (mdx / mdist) * lensForce * 3;
-                        this.vy += (mdy / mdist) * lensForce * 3;
+                        this.vx += (mdx / mdist) * lensForce * 2;
+                        this.vy += (mdy / mdist) * lensForce * 2;
                     }
                 }
 
-                // Resistência física do meio cósmico
                 this.vx *= drag;
                 this.vy *= drag;
 
-                // Limite máximo de velocidade física para não "estourar" os caracteres da tela
-                const currentSpeed = Math.hypot(this.vx, this.vy);
-                if (currentSpeed > this.speedLimit) {
+                // Limite de velocidade de segurança para manter o desenho
+                const currentSpeedSq = this.vx * this.vx + this.vy * this.vy;
+                if (currentSpeedSq > this.speedLimit * this.speedLimit) {
+                    const currentSpeed = Math.sqrt(currentSpeedSq);
                     this.vx = (this.vx / currentSpeed) * this.speedLimit;
                     this.vy = (this.vy / currentSpeed) * this.speedLimit;
                 }
 
-                // Atualizar posições reais
                 this.x += this.vx;
                 this.y += this.vy;
 
-                // Teletransportar partículas perdidas muito longe de volta ao ciclo de atração quântica
                 if (this.x < -100 || this.x > canvas.width + 100 || this.y < -100 || this.y > canvas.height + 100) {
                     this.reset(false);
                 }
             }
 
             draw(ctx, time) {
-                // Cálculo de oscilação do brilho quântico individual (efeito cintilante)
                 const blink = Math.sin(time * 5 + this.glowOffset) * 0.3 + 0.7;
                 const dynamicAlpha = this.alpha * blink;
 
-                // Determina coloração do fóton de acordo com a velocidade (energia cinética)
-                // Tons de verde escuro a verde neon fluorescente quase branco
-                const energy = Math.hypot(this.vx, this.vy);
-                const colorTone = Math.min(255, Math.floor(100 + energy * 30));
+                const energy = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                const colorTone = Math.min(255, Math.floor(110 + energy * 25));
 
-                ctx.font = `${this.size}px 'Orbitron', 'Share Tech Mono', monospace`;
-                
-                // Configurando a cor verde brilhante neon baseada na energia da partícula
                 ctx.fillStyle = `rgba(${255 - colorTone}, 255, ${200 - colorTone}, ${dynamicAlpha})`;
-                
-                // Renderização física
                 ctx.fillText(this.char, this.x, this.y);
 
-                // Desenho de conexões de feixes de dados de amor (Emaranhamento Quântico)
-                if (currentMode === 'entanglement' && this.index % 12 === 0) {
-                    // Conecta com o próximo nó de rede para criar constelações quânticas
-                    const nextParticle = particles[(this.index + 12) % particleCount];
-                    const distToNext = Math.hypot(nextParticle.x - this.x, nextParticle.y - this.y);
+                // Emaranhamento de partículas próximas (linhas de conexão sutis)
+                if (this.index % 16 === 0) {
+                    const nextParticle = particles[(this.index + 16) % particleCount];
+                    const ndx = nextParticle.x - this.x;
+                    const ndy = nextParticle.y - this.y;
+                    const distToNextSq = ndx * ndx + ndy * ndy;
 
-                    if (distToNext < 80) {
-                        ctx.strokeStyle = `rgba(0, 255, 102, ${(1 - distToNext / 80) * 0.15})`;
+                    if (distToNextSq < 5625) { // 75 * 75
+                        const distToNext = Math.sqrt(distToNextSq);
+                        ctx.strokeStyle = `rgba(0, 255, 102, ${(1 - distToNext / 75) * 0.12})`;
                         ctx.lineWidth = 0.5;
                         ctx.beginPath();
                         ctx.moveTo(this.x, this.y);
@@ -446,52 +238,21 @@
             }
         }
 
-        // Inicializar pooling de partículas
+        const sizes = [7, 10, 13];
         for (let i = 0; i < particleCount; i++) {
-            particles.push(new QuantumParticle(i));
+            const discreteSize = sizes[i % sizes.length];
+            particles.push(new QuantumParticle(i, discreteSize));
         }
 
-        // Controle dos modos quânticos (Interface interativa)
-        function setQuantumMode(mode) {
-            currentMode = mode;
-            
-            // Remove destaque de todos os botões
-            document.querySelectorAll('.quantum-btn').forEach(btn => {
-                if(btn.id.startsWith('btn-')) {
-                    btn.classList.remove('bg-[#00ff66]/20', 'border-[#00ff66]/40', 'text-white');
-                    btn.classList.add('text-[#00ff66]/60');
-                }
-            });
+        // Ordenação por tamanho para evitar chamadas de alteração de fonte excessivas
+        particles.sort((a, b) => a.size - b.size);
 
-            // Adiciona destaque ao botão ativo
-            const activeBtn = document.getElementById(`btn-${mode}`);
-            if (activeBtn) {
-                activeBtn.classList.remove('text-[#00ff66]/60');
-                activeBtn.classList.add('bg-[#00ff66]/20', 'border-[#00ff66]/40', 'text-white');
-            }
-
-            // Atualização de feedbacks na interface de comando
-            const gravityDisplay = document.getElementById('gravity-display');
-            if (mode === 'singularity') {
-                gravityDisplay.textContent = "9.81G [MÁXIMO]";
-                gravityDisplay.className = "text-red-500 font-bold animate-pulse";
-            } else if (mode === 'supernova') {
-                gravityDisplay.textContent = "VÁRIÁVEL [ENTROPIA]";
-                gravityDisplay.className = "text-yellow-400 font-bold";
-            } else {
-                gravityDisplay.textContent = "1.00G [PADRÃO]";
-                gravityDisplay.className = "text-white font-bold";
-            }
-        }
-
-        // Interpolação suave (lerp) para que o cursor da lente gravitacional tenha "massa física"
         let lerpX = canvas.width / 2;
         let lerpY = canvas.height / 2;
-
         let time = 0;
 
         function animate() {
-            // Efeito de persistência de tela acumulativa para criar caudas de luz impressionantes
+            // Fundo escuro com persistência leve de rastro (motion blur)
             ctx.fillStyle = 'rgba(2, 5, 3, 0.22)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -500,34 +261,62 @@
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2;
 
-            // Escala base do coração que se ajusta responsivamente à tela
-            const baseScale = Math.min(canvas.width, canvas.height) * 0.022;
+            // Escala do coração baseada na dimensão da tela
+            const baseScale = Math.min(canvas.width, canvas.height) * 0.021;
 
-            // Pulsação fisiológica/matemática baseada em um batimento cardíaco duplo real
+            // Pulsação de batimentos cardíacos duplos realista
             const heartBeatTime = time * 2.8;
-            const pulse = 1 + (Math.pow(Math.sin(heartBeatTime), 2) * Math.pow(Math.cos(heartBeatTime), 4) * 0.25);
+            const pulse = 1 + (Math.pow(Math.sin(heartBeatTime), 2) * Math.pow(Math.cos(heartBeatTime), 4) * 0.28);
 
-            // Filtro dinâmico do som baseado no batimento e movimento do cursor
+            // Suavização do movimento do mouse para interações orgânicas
             lerpX += (mouse.targetX - lerpX) * 0.08;
             lerpY += (mouse.targetY - lerpY) * 0.08;
-            synth.updateFreqs(lerpX, lerpY, canvas.width, canvas.height, pulse - 1);
 
-            // Atualização e renderização das partículas de fótons
+            let currentSize = 0;
             for (let i = 0; i < particles.length; i++) {
-                particles[i].update(centerX, centerY, baseScale, pulse, time);
-                particles[i].draw(ctx, time);
+                const p = particles[i];
+                p.update(centerX, centerY, baseScale, pulse);
+                
+                if (p.size !== currentSize) {
+                    currentSize = p.size;
+                    ctx.font = `${currentSize}px 'Orbitron', monospace`;
+                }
+
+                p.draw(ctx, time);
             }
 
-            // Anel Gravitacional do Cursor (Mostra onde o espaço está sendo distorcido)
+            // Renderiza o Nome "THAY" de forma brilhante no centro da singularidade
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Brilho holográfico verde neon
+            ctx.shadowBlur = 20 * pulse;
+            ctx.shadowColor = 'rgba(0, 255, 102, 0.8)';
+            
+            // O nome aumenta e diminui sutilmente no ritmo exato do pulso quântico
+            const thayFontSize = Math.max(34, Math.min(window.innerWidth * 0.06, 54)) * pulse;
+            ctx.font = `900 ${thayFontSize}px 'Orbitron', sans-serif`;
+            
+            // Gradiente sutil para o texto
+            const textGradient = ctx.createLinearGradient(centerX - 100, centerY, centerX + 100, centerY);
+            textGradient.addColorStop(0, '#ffffff');
+            textGradient.addColorStop(0.5, '#a3ffc2');
+            textGradient.addColorStop(1, '#ffffff');
+            
+            ctx.fillStyle = textGradient;
+            ctx.fillText('THAY', centerX, centerY + (baseScale * 1.5)); // Ajuste de posição vertical sutil para alinhar com o centro do formato do coração
+            ctx.restore();
+
+            // Desenho do indicador visual do cursor gravitacional
             if (mouse.active) {
-                ctx.strokeStyle = 'rgba(0, 255, 102, 0.15)';
+                ctx.strokeStyle = 'rgba(0, 255, 102, 0.12)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
                 ctx.arc(lerpX, lerpY, 220, 0, Math.PI * 2);
                 ctx.stroke();
 
-                // Núcleo do campo gravitacional
-                ctx.fillStyle = 'rgba(0, 255, 102, 0.03)';
+                ctx.fillStyle = 'rgba(0, 255, 102, 0.02)';
                 ctx.beginPath();
                 ctx.arc(lerpX, lerpY, 50, 0, Math.PI * 2);
                 ctx.fill();
@@ -536,56 +325,10 @@
             requestAnimationFrame(animate);
         }
 
-        // Iniciar animação quântica após carregamento completo
+        // Executar após carregamento completo
         window.onload = function() {
             animate();
         };
-
-        // Frases complexas e poéticas no conceito "Amor Científico Quântico"
-        const neuralPoetry = [
-            "SINAL DETECTADO: VOCÊ CONSTITUI A MINHA GEOMETRIA DO ESPAÇO-TEMPO.",
-            "ENTROPIA REVERSA CONFIRMADA: AO SEU LADO, O UNIVERSO CRIA ORDEM.",
-            "EMARANHAMENTO COGNITIVO: MINHA CONSTANTE DE PLANK DEPENDE DA SUA PRESENÇA.",
-            "PROCESSO CONCLUÍDO: SEU SORRISO É A CONSTANTE UNIVERSAL DO MEU SISTEMA.",
-            "ALERTA: FORÇA DE ATRAÇÃO GRAVITACIONAL INFINITA DETECTADA NO CENTRO CARDÍACO.",
-            "TEOREMA DE INCOMPLETUDE DE GÖDEL RESOLVIDO: VOCÊ É A MINHA PROVA DE VERDADE.",
-            "SUTURA DE ESPAÇO-TEMPO ESTÁVEL // DIAGNÓSTICO: MEU FUTURO CONVERGE PARA VOCÊ.",
-            "CÁLCULO EXECUTADO: LATÊNCIA DO MEU CORAÇÃO RESULTA EM ZERO AO SEU TOQUE.",
-            "ALINHAMENTO QUÂNTICO DETECTADO: NÓS DOIS ESTAMOS EMARANHADOS PARA SEMPRE."
-        ];
-
-        let poetryIndex = 0;
-        let charIndex = 0;
-        let isDeleting = false;
-        const poetryElement = document.getElementById('poetry-text');
-
-        function typePoetry() {
-            const currentSentence = neuralPoetry[poetryIndex];
-
-            if (isDeleting) {
-                poetryElement.textContent = currentSentence.substring(0, charIndex - 1);
-                charIndex--;
-            } else {
-                poetryElement.textContent = currentSentence.substring(0, charIndex + 1);
-                charIndex++;
-            }
-
-            let typingSpeed = isDeleting ? 20 : 60;
-
-            if (!isDeleting && charIndex === currentSentence.length) {
-                typingSpeed = 5000; // Tempo de exibição da frase romântica inteira
-                isDeleting = true;
-            } else if (isDeleting && charIndex === 0) {
-                isDeleting = false;
-                poetryIndex = (poetryIndex + 1) % neuralPoetry.length;
-                typingSpeed = 500;
-            }
-
-            setTimeout(typePoetry, typingSpeed);
-        }
-
-        // Iniciar terminal de inteligência artificial poética
-        setTimeout(typePoetry, 1000);
     </script>
 </body>
 </html>
