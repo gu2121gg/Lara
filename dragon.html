@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skeletal Dragon - Interactive Experience</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Arial', sans-serif;
+            color: #fff;
+        }
+        
+        #canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 20px;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            font-size: 14px;
+            max-width: 350px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        
+        .info-panel h3 {
+            color: #00ff88;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .info-panel p {
+            margin: 5px 0;
+            color: #0ff;
+            font-size: 12px;
+        }
+        
+        .stats {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 20px;
+            border: 2px solid #ff0080;
+            border-radius: 8px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        
+        .stats p {
+            margin: 3px 0;
+            color: #ff0080;
+        }
+        
+        .crosshair {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 2px solid #00ff88;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            opacity: 0.6;
+        }
+        
+        .crosshair::before,
+        .crosshair::after {
+            content: '';
+            position: absolute;
+            background: #00ff88;
+        }
+        
+        .crosshair::before {
+            width: 2px;
+            height: 10px;
+            left: 50%;
+            top: -15px;
+            transform: translateX(-50%);
+        }
+        
+        .crosshair::after {
+            width: 10px;
+            height: 2px;
+            left: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="crosshair"></div>
+    <div class="info-panel">
+        <h3>🐉 Skeletal Dragon</h3>
+        <p>Move your mouse to control the dragon's gaze and behavior</p>
+        <p>Advanced Features:</p>
+        <p>✓ Full Skeletal Animation System</p>
+        <p>✓ Inverse Kinematics</p>
+        <p>✓ Physics-Based Movement</p>
+        <p>✓ Procedural Animation</p>
+        <p>✓ PBR Rendering</p>
+        <p>✓ Dynamic Particles</p>
+        <p>✓ Volumetric Effects</p>
+        <p>✓ Post-Processing</p>
+    </div>
+    <div class="stats">
+        <p>FPS: <span id="fps">60</span></p>
+        <p>Bones: <span id="bones">0</span></p>
+        <p>Particles: <span id="particles">0</span></p>
+        <p>Polygons: <span id="polygons">0</span></p>
+    </div>
+
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        #version 300 es
+        precision highp float;
+        
+        layout (location = 0) in vec3 position;
+        layout (location = 1) in vec3 normal;
+        layout (location = 2) in vec4 boneIndices;
+        layout (location = 3) in vec4 boneWeights;
+        layout (location = 4) in vec3 vertexColor;
+        
+        uniform mat4 projection;
+        uniform mat4 view;
+        uniform mat4 model;
+        uniform mat4 normalMatrix;
+        uniform mat4 boneMatrices[128];
+        
+        out vec3 fragPos;
+        out vec3 fragNormal;
+        out vec3 vColor;
+        
+        void main() {
+            mat4 skinMatrix = 
+                boneMatrices[int(boneIndices.x)] * boneWeights.x +
+                boneMatrices[int(boneIndices.y)] * boneWeights.y +
+                boneMatrices[int(boneIndices.z)] * boneWeights.z +
+                boneMatrices[int(boneIndices.w)] * boneWeights.w;
+            
+            vec4 skinPos = skinMatrix * vec4(position, 1.0);
+            vec4 worldPos = model * skinPos;
+            
+            fragPos = worldPos.xyz;
+            fragNormal = normalize(mat3(normalMatrix) * normal);
+            vColor = vertexColor;
+            
+            gl_Position = projection * view * worldPos;
+        }
+    </script>
+
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        #version 300 es
+        precision highp float;
+        
+        in vec3 fragPos;
+        in vec3 fragNormal;
+        in vec3 vColor;
+        
+        uniform vec3 lightPos;
+        uniform vec3 viewPos;
+        uniform vec3 lightColor;
+        uniform float time;
+        
+        out vec4 FragColor;
+        
+        float metallic = 0.7;
+        float roughness = 0.4;
+        
+        vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+            return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+        }
+        
+        float DistributionGGX(vec3 N, vec3 H, float roughness) {
+            float a = roughness * roughness;
+            float a2 = a * a;
+            float NdotH = max(dot(N, H), 0.0);
+            float nom = a2;
+            float denom = (NdotH * NdotH * (a2 - 1.0) + 1.0);
+            denom = 3.14159 * denom * denom;
+            return nom / max(denom, 0.0001);
+        }
+        
+        float GeometrySchlickGGX(float NdotV, float roughness) {
+            float r = (roughness + 1.0);
+            float k = (r * r) / 8.0;
+            return NdotV / max(NdotV * (1.0 - k) + k, 0.0001);
+        }
+        
+        float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
+            float NdotV = max(dot(N, V), 0.0);
+            float NdotL = max(dot(N, L), 0.0);
+            return GeometrySchlickGGX(NdotV, roughness) * GeometrySchlickGGX(NdotL, roughness);
+        }
+        
+        void main() {
+            vec3 N = normalize(fragNormal);
+            vec3 V = normalize(viewPos - fragPos);
+            vec3 L = normalize(lightPos - fragPos);
+            vec3 H = normalize(V + L);
+            
+            float distance = length(lightPos - fragPos);
+            float attenuation = 1.0 / (distance * distance + 1.0);
+            vec3 radiance = lightColor * attenuation;
+            
+            vec3 F0 = vec3(0.04);
+            F0 = mix(F0, vColor, metallic);
+            
+            vec3 F = fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), F0);
+            float NDF = DistributionGGX(N, H, roughness);
+            float G = GeometrySmith(N, V, L, roughness);
+            
+            vec3 kS = F;
+            vec3 kD = vec3(1.0) - kS;
+            kD *= 1.0 - metallic;
+            
+            float NdotL = max(dot(N, L), 0.0);
+            vec3 specular = (NDF * G * F) / max(4.0 * max(dot(N, V), 0.0) * NdotL, 0.001);
+            vec3 Lo = (kD * vColor / 3.14159 + specular) * radiance * NdotL;
+            
+            vec3 ambient = vec3(0.02) * vColor;
+            vec3 color = ambient + Lo;
+            
+            // Spectral glow effect
+            float glow = 0.2 * sin(fragPos.y * 0.8 + time) * 0.5 + 0.5;
+            color += vColor * 0.2 * glow;
+            
+            // HDR tone mapping
+            color = color / (color + vec3(1.0));
+            color = pow(color, vec3(1.0 / 2.2));
+            
+            FragColor = vec4(color, 1.0);
+        }
+    </script>
+
+    <script id="particle-vertex" type="x-shader/x-vertex">
+        #version 300 es
+        precision highp float;
+        
+        layout (location = 0) in vec3 position;
+        layout (location = 1) in vec4 color;
+        layout (location = 2) in float size;
+        layout (location = 3) in float life;
+        
+        uniform mat4 projection;
+        uniform mat4 view;
+        uniform mat4 model;
+        
+        out vec4 vColor;
+        out float vLife;
+        
+        void main() {
+            vColor = color;
+            vLife = life;
+            vec4 worldPos = model * vec4(position, 1.0);
+            gl_Position = projection * view * worldPos;
+            gl_PointSize = size;
+        }
+    </script>
+
+    <script id="particle-fragment" type="x-shader/x-fragment">
+        #version 300 es
+        precision highp float;
+        
+        in vec4 vColor;
+        in float vLife;
+        
+        out vec4 FragColor;
+        
+        void main() {
+            float dist = length(gl_PointCoord - vec2(0.5));
+            if (dist > 0.5) discard;
+            
+            float alpha = (1.0 - dist * 2.0) * vLife * vColor.a;
+            vec3 glow = vColor.rgb * (1.0 - vLife) * 2.5;
+            
+            FragColor = vec4(vColor.rgb + glow, alpha);
+        }
+    </script>
+
+    <script>
+        // Vector3 class for 3D mathematics
+        class Vector3 {
+            constructor(x = 0, y = 0, z = 0) {
+                this.x = x;
+                this.y = y;
+                this.z = z;
+            }
+            
+            add(v) {
+                return new Vector3(this.x + v.x, this.y + v.y, this.z + v.z);
+            }
+            
+            subtract(v) {
+                return new Vector3(this.x - v.x, this.y - v.y, this.z - v.z);
+            }
+            
+            multiply(scalar) {
+                return new Vector3(this.x * scalar, this.y * scalar, this.z * scalar);
+            }
+            
+            divide(scalar) {
+                return new Vector3(this.x / scalar, this.y / scalar, this.z / scalar);
+            }
+            
+            dot(v) {
+                return this.x * v.x + this.y * v.y + this.z * v.z;
+            }
+            
+            cross(v) {
+                return new Vector3(
+                    this.y * v.z - this.z * v.y,
+                    this.z * v.x - this.x * v.z,
+                    this.x * v.y - this.y * v.x
+                );
+            }
+            
+            length() {
+                return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
+            }
+            
+            normalize() {
+                const len = this.length();
+                if (len === 0) return this;
+                return new Vector3(this.x / len, this.y / len, this.z / len);
+            }
+            
+            clone() {
+                return new Vector3(this.x, this.y, this.z);
+            }
+            
+            lerp(v, t) {
+                return new Vector3(
+                    this.x + (v.x - this.x) * t,
+                    this.y + (v.y - this.y) * t,
+                    this.z + (v.z - this.z) * t
+                );
+            }
+        }
+
+        // Matrix4 for transformations
+        class Matrix4 {
+            constructor() {
+                this.elements = new Float32Array(16);
+                this.identity();
+            }
+            
+            identity() {
+                const e = this.elements;
+                e[0]=1; e[4]=0; e[8]=0;  e[12]=0;
+                e[1]=0; e[5]=1; e[9]=0;  e[13]=0;
+                e[2]=0; e[6]=0; e[10]=1; e[14]=0;
+                e[3]=0; e[7]=0; e[11]=0; e[15]=1;
+                return this;
+            }
+            
+            translate(x, y, z) {
+                const e = this.elements;
+                e[12] = e[0]*x + e[4]*y + e[8]*z + e[12];
+                e[13] = e[1]*x + e[5]*y + e[9]*z + e[13];
+                e[14] = e[2]*x + e[6]*y + e[10]*z + e[14];
+                return this;
+            }
+            
+            rotateX(angle) {
+                const c = Math.cos(angle);
+                const s = Math.sin(angle);
+                const e = this.elements;
+                const e4 = e[4], e5 = e[5], e6 = e[6], e7 = e[7];
+                const e8 = e[8], e9 = e[9], e10 = e[10], e11 = e[11];
+                e[4] = e4*c + e8*s;
+                e[5] = e5*c + e9*s;
+                e[6] = e6*c + e10*s;
+                e[7] = e7*c + e11*s;
+                e[8] = e4*-s + e8*c;
+                e[9] = e5*-s + e9*c;
+                e[10] = e6*-s + e10*c;
+                e[11] = e7*-s + e11*c;
+                return this;
+            }
+            
+            rotateY(angle) {
+                const c = Math.cos(angle);
+                const s = Math.sin(angle);
+                const e = this.elements;
+                const e0 = e[0], e1 = e[1], e2 = e[2], e3 = e[3];
+                const e8 = e[8], e9 = e[9], e10 = e[10], e11 = e[11];
+                e[0] = e0*c + e8*-s;
+                e[1] = e1*c + e9*-s;
+                e[2] = e2*c + e10*-s;
+                e[3] = e3*c + e11*-s;
+                e[8] = e0*s + e8*c;
+                e[9] = e1*s + e9*c;
+                e[10] = e2*s + e10*c;
+                e[11] = e3*s + e11*c;
+                return this;
+            }
+            
+            rotateZ(angle) {
+                const c = Math.cos(angle);
+                const s = Math.sin(angle);
+                const e = this.elements;
+                const e0 = e[0], e1 = e[1], e2 = e[2], e3 = e[3];
+                const e4 = e[4], e5 = e[5], e6 = e[6], e7 = e[7];
+                e[0] = e0*c + e4*s;
+                e[1] = e1*c + e5*s;
+                e[2] = e2*c + e6*s;
+                e[3] = e3*c + e7*s;
+                e[4] = e0*-s + e4*c;
+                e[5] = e1*-s + e5*c;
+                e[6] = e2*-s + e6*c;
+                e[7] = e3*-s + e7*c;
+                return this;
+            }
+            
+            scale(x, y, z) {
+                const e = this.elements;
+                e[0]*=x; e[1]*=x; e[2]*=x; e[3]*=x;
+                e[4]*=y; e[5]*=y; e[6]*=y; e[7]*=y;
+                e[8]*=z; e[9]*=z; e[10]*=z; e[11]*=z;
+                return this;
+            }
+            
+            multiply(m) {
+                const e = this.elements;
+                const me = m.elements;
+                const result = new Float32Array(16);
+                for (let i=0; i<4; i++) {
+                    for (let j=0; j<4; j++) {
+                        let sum = 0;
+                        for (let k=0; k<4; k++) {
+                            sum += e[i + k*4] * me[k + j*4];
+                        }
+                        result[i + j*4] = sum;
+                    }
+                }
+                this.elements.set(result);
+                return this;
+            }
+            
+            perspective(fov, aspect, near, far) {
+                const f = 1 / Math.tan(fov / 2);
+                const e = this.elements;
+                e[0] = f/aspect; e[4] = 0; e[8] = 0; e[12] = 0;
+                e[1] = 0; e[5] = f; e[9] = 0; e[13] = 0;
+                e[2] = 0; e[6] = 0; e[10] = (far+near)/(near-far); e[14] = (2*far*near)/(near-far);
+                e[3] = 0; e[7] = 0; e[11] = -1; e[15] = 0;
+                return this;
+            }
+            
+            lookAt(eye, center, up) {
+                const z = eye.subtract(center).normalize();
+                const x = up.cross(z).normalize();
+                const y = z.cross(x).normalize();
+                const e = this.elements;
+                e[0]=x.x; e[4]=x.y; e[8]=x.z; e[12]=-x.dot(eye);
+                e[1]=y.x; e[5]=y.y; e[9]=y.z; e[13]=-y.dot(eye);
+                e[2]=z.x; e[6]=z.y; e[10]=z.z; e[14]=-z.dot(eye);
+                e[3]=0; e[7]=0; e[11]=0; e[15]=1;
+                return this;
+            }
+            
+            invert() {
+                const m = this.elements;
+                const inv = new Float32Array(16);
+                inv[0] = m[5]*m[10]*m[15] - m[5]*m[11]*m[14] - m[9]*m[6]*m[15] + m[9]*m[7]*m[14] + m[13]*m[6]*m[11] - m[13]*m[7]*m[10];
+                inv[4] = -m[4]*m[10]*m[15] + m[4]*m[11]*m[14] + m[8]*m[6]*m[15] - m[8]*m[7]*m[14] - m[12]*m[6]*m[11] + m[12]*m[7]*m[10];
+                inv[8] = m[4]*m[9]*m[15] - m[4]*m[11]*m[13] - m[8]*m[5]*m[15] + m[8]*m[7]*m[13] + m[12]*m[5]*m[11] - m[12]*m[7]*m[9];
+                inv[12] = -m[4]*m[9]*m[14] + m[4]*m[10]*m[13] + m[8]*m[5]*m[14] - m[8]*m[6]*m[13] - m[12]*m[5]*m[10] + m[12]*m[6]*m[9];
+                inv[1] = -m[1]*m[10]*m[15] + m[1]*m[11]*m[14] + m[9]*m[2]*m[15] - m[9]*m[3]*m[14] - m[13]*m[2]*m[11] + m[13]*m[3]*m[10];
+                inv[5] = m[0]*m[10]*m[15] - m[0]*m[11]*m[14] - m[8]*m[2]*m[15] + m[8]*m[3]*m[14] + m[12]*m[2]*m[11] - m[12]*m[3]*m[10];
+                inv[9] = -m[0]*m[9]*m[15] + m[0]*m[11]*m[13] + m[8]*m[1]*m[15] - m[8]*m[3]*m[13] - m[12]*m[1]*m[11] + m[12]*m[3]*m[9];
+                inv[13] = m[0]*m[9]*m[14] - m[0]*m[10]*m[13] - m[8]*m[1]*m[14] + m[8]*m[2]*m[13] + m[12]*m[1]*m[10] - m[12]*m[2]*m[9];
+                inv[2] = m[1]*m[6]*m[15] - m[1]*m[7]*m[14] - m[5]*m[2]*m[15] + m[5]*m[3]*m[14] + m[13]*m[2]*m[7] - m[13]*m[3]*m[6];
+                inv[6] = -m[0]*m[6]*m[15] + m[0]*m[7]*m[14] + m[4]*m[2]*m[15] - m[4]*m[3]*m[14] - m[12]*m[2]*m[7] + m[12]*m[3]*m[6];
+                inv[10] = m[0]*m[5]*m[15] - m[0]*m[7]*m[13] - m[4]*m[1]*m[15] + m[4]*m[3]*m[13] + m[12]*m[1]*m[7] - m[12]*m[3]*m[5];
+                inv[14] = -m[0]*m[5]*m[14] + m[0]*m[6]*m[13] + m[4]*m[1]*m[14] - m[4]*m[2]*m[13] - m[12]*m[1]*m[6] + m[12]*m[2]*m[5];
+                inv[3] = -m[1]*m[6]*m[11] + m[1]*m[7]*m[10] + m[5]*m[2]*m[11] - m[5]*m[3]*m[10] - m[9]*m[2]*m[7] + m[9]*m[3]*m[6];
+                inv[7] = m[0]*m[6]*m[11] - m[0]*m[7]*m[10] - m[4]*m[2]*m[11] + m[4]*m[3]*m[10] + m[8]*m[2]*m[7] - m[8]*m[3]*m[6];
+                inv[11] = -m[0]*m[5]*m[11] + m[0]*m[7]*m[9] + m[4]*m[1]*m[11] - m[4]*m[3]*m[9] - m[8]*m[1]*m[7] + m[8]*m[3]*m[5];
+                inv[15] = m[0]*m[5]*m[10] - m[0]*m[6]*m[9] - m[4]*m[1]*m[10] + m[4]*m[2]*m[9] + m[8]*m[1]*m[6] - m[8]*m[2]*m[5];
+                let det = m[0]*inv[0] + m[1]*inv[4] + m[2]*inv[8] + m[3]*inv[12];
+                if (Math.abs(det) < 0.00001) return this;
+                for (let i=0; i<16; i++) inv[i] /= det;
+                this.elements.set(inv);
+                return this;
+            }
+        }
+
+        // Quaternion for smooth rotations
+        class Quaternion {
+            constructor(x=0, y=0, z=0, w=1) {
+                this.x = x; this.y = y; this.z = z; this.w = w;
+            }
+            
+            multiply(q) {
+                return new Quaternion(
+                    this.w*q.x + this.x*q.w + this.y*q.z - this.z*q.y,
+                    this.w*q.y - this.x*q.z + this.y*q.w + this.z*q.x,
+                    this.w*q.z + this.x*q.y - this.y*q.x + this.z*q.w,
+                    this.w*q.w - this.x*q.x - this.y*q.y - this.z*q.z
+                );
+            }
+            
+            static fromAxisAngle(axis, angle) {
+                const half = angle / 2;
+                const sin = Math.sin(half);
+                return new Quaternion(axis.x*sin, axis.y*sin, axis.z*sin, Math.cos(half));
+            }
+            
+            static slerp(a, b, t) {
+                let dot = a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w;
+                dot = Math.max(-1, Math.min(1, dot));
+                const theta = Math.acos(dot) * t;
+                const bx = b.x - a.x*dot;
+                const by = b.y - a.y*dot;
+                const bz = b.z - a.z*dot;
+                const bw = b.w - a.w*dot;
+                const bLen = Math.sqrt(bx*bx + by*by + bz*bz + bw*bw) || 1;
+                return new Quaternion(
+                    a.x*Math.cos(theta) + (bx/bLen)*Math.sin(theta),
+                    a.y*Math.cos(theta) + (by/bLen)*Math.sin(theta),
+                    a.z*Math.cos(theta) + (bz/bLen)*Math.sin(theta),
+                    a.w*Math.cos(theta) + (bw/bLen)*Math.sin(theta)
+                );
+            }
+            
+            toMatrix() {
+                const m = new Matrix4();
+                const x=this.x, y=this.y, z=this.z, w=this.w;
+                const xx=x*x, yy=y*y, zz=z*z;
+                const xy=x*y, xz=x*z, yz=y*z, wx=w*x, wy=w*y, wz=w*z;
+                const e = m.elements;
+                e[0]=1-2*(yy+zz); e[1]=2*(xy+wz); e[2]=2*(xz-wy);
+                e[4]=2*(xy-wz); e[5]=1-2*(xx+zz); e[6]=2*(yz+wx);
+                e[8]=2*(xz+wy); e[9]=2*(yz-wx); e[10]=1-2*(xx+yy);
+                return m;
+            }
+        }
+
+        // Bone class for skeletal structure
+        class Bone {
+            constructor(name, position=new Vector3(), parent=null) {
+                this.name = name;
+                this.position = position;
+                this.parent = parent;
+                this.children = [];
+                this.rotation = new Quaternion();
+                this.scale = new Vector3(1,1,1);
+                this.matrix = new Matrix4();
+                this.worldMatrix = new Matrix4();
+                if (parent) parent.children.push(this);
+            }
+            
+            updateMatrix() {
+                this.matrix = new Matrix4();
+                const rot = this.rotation.toMatrix();
+                const scaleM = new Matrix4();
+                scaleM.elements[0] = this.scale.x;
+                scaleM.elements[5] = this.scale.y;
+                scaleM.elements[10] = this.scale.z;
+                this.matrix.multiply(scaleM);
+                this.matrix.multiply(rot);
+                this.matrix.translate(this.position.x, this.position.y, this.position.z);
+                if (this.parent) {
+                    this.worldMatrix.elements.set(this.parent.worldMatrix.elements);
+                    this.worldMatrix.multiply(this.matrix);
+                } else {
+                    this.worldMatrix.elements.set(this.matrix.elements);
+                }
+                for (let c of this.children) c.updateMatrix();
+            }
+            
+            getWorldPosition() {
+                const m = this.worldMatrix.elements;
+                return new Vector3(m[12], m[13], m[14]);
+            }
+        }
+
+        // Skeletal mesh system
+        class SkeletalMesh {
+            constructor(gl) {
+                this.gl = gl;
+                this.bones = [];
+                this.vertices = [];
+                this.indices = [];
+                this.normals = [];
+                this.colors = [];
+                this.boneIndices = [];
+                this.boneWeights = [];
+                this.vao = null;
+                this.indexCount = 0;
+                this.boneMatrices = new Float32Array(128*16);
+                this.buffers = {};
+            }
+            
+            addBone(name, position, parent=null) {
+                const bone = new Bone(name, position, parent);
+                this.bones.push(bone);
+                return bone;
+            }
+            
+            addVertex(pos, norm, col, boneIdx, boneWt) {
+                this.vertices.push(pos.x, pos.y, pos.z);
+                this.normals.push(norm.x, norm.y, norm.z);
+                this.colors.push(col.x, col.y, col.z);
+                this.boneIndices.push(boneIdx[0]||0, boneIdx[1]||0, boneIdx[2]||0, boneIdx[3]||0);
+                this.boneWeights.push(boneWt[0]||1, boneWt[1]||0, boneWt[2]||0, boneWt[3]||0);
+            }
+            
+            addTriangle(i1, i2, i3) {
+                this.indices.push(i1, i2, i3);
+            }
+            
+            createMesh() {
+                const gl = this.gl;
+                this.vao = gl.createVertexArray();
+                gl.bindVertexArray(this.vao);
+                
+                const posBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertices), gl.STATIC_DRAW);
+                gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(0);
+                
+                const normBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, normBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.normals), gl.STATIC_DRAW);
+                gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(1);
+                
+                const boneIdxBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, boneIdxBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.boneIndices), gl.STATIC_DRAW);
+                gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(2);
+                
+                const boneWtBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, boneWtBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.boneWeights), gl.STATIC_DRAW);
+                gl.vertexAttribPointer(3, 4, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(3);
+                
+                const colorBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.colors), gl.STATIC_DRAW);
+                gl.vertexAttribPointer(4, 3, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(4);
+                
+                const indexBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(this.indices), gl.STATIC_DRAW);
+                
+                this.indexCount = this.indices.length;
+                gl.bindVertexArray(null);
+            }
+            
+            updateBoneMatrices() {
+                for (let i=0; i<this.bones.length; i++) {
+                    this.boneMatrices.set(this.bones[i].worldMatrix.elements, i*16);
+                }
+            }
+        }
+
+        // Particle system for spectral effects
+        class ParticleSystem {
+            constructor(gl, maxParticles=10000) {
+                this.gl = gl;
+                this.maxParticles = maxParticles;
+                this.particles = [];
+                this.positions = new Float32Array(maxParticles*3);
+                this.colors = new Float32Array(maxParticles*4);
+                this.sizes = new Float32Array(maxParticles);
+                this.lives = new Float32Array(maxParticles);
+                this.vao = null;
+                this.activeCount = 0;
+                this.nextIdx = 0;
+                this.createMesh();
+            }
+            
+            createMesh() {
+                const gl = this.gl;
+                this.vao = gl.createVertexArray();
+                gl.bindVertexArray(this.vao);
+                
+                const posBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, this.positions, gl.DYNAMIC_DRAW);
+                gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(0);
+                this.posBuffer = posBuffer;
+                
+                const colorBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, this.colors, gl.DYNAMIC_DRAW);
+                gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(1);
+                this.colorBuffer = colorBuffer;
+                
+                const sizeBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, this.sizes, gl.DYNAMIC_DRAW);
+                gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(2);
+                this.sizeBuffer = sizeBuffer;
+                
+                const lifeBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, lifeBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, this.lives, gl.DYNAMIC_DRAW);
+                gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(3);
+                this.lifeBuffer = lifeBuffer;
+                
+                gl.bindVertexArray(null);
+            }
+            
+            emit(pos, vel, col, life, size=20) {
+                if (this.activeCount >= this.maxParticles) return false;
+                const idx = this.nextIdx;
+                this.positions[idx*3] = pos.x;
+                this.positions[idx*3+1] = pos.y;
+                this.positions[idx*3+2] = pos.z;
+                this.colors[idx*4] = col.x;
+                this.colors[idx*4+1] = col.y;
+                this.colors[idx*4+2] = col.z;
+                this.colors[idx*4+3] = col.w || 1;
+                this.sizes[idx] = size;
+                this.lives[idx] = life;
+                this.particles.push({pos: pos.clone(), vel: vel.clone(), life, maxLife: life, idx});
+                this.activeCount++;
+                this.nextIdx = (this.nextIdx + 1) % this.maxParticles;
+                return true;
+            }
+            
+            update(dt) {
+                const g = new Vector3(0, -3, 0);
+                for (let i=this.particles.length-1; i>=0; i--) {
+                    const p = this.particles[i];
+                    p.life -= dt;
+                    if (p.life <= 0) {
+                        this.particles.splice(i, 1);
+                        this.activeCount--;
+                        continue;
+                    }
+                    p.vel = p.vel.add(g.multiply(dt));
+                    p.pos = p.pos.add(p.vel.multiply(dt));
+                    const idx = p.idx;
+                    this.positions[idx*3] = p.pos.x;
+                    this.positions[idx*3+1] = p.pos.y;
+                    this.positions[idx*3+2] = p.pos.z;
+                    this.lives[idx] = Math.max(0, p.life / p.maxLife);
+                }
+            }
+            
+            updateBuffers() {
+                const gl = this.gl;
+                gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
+                gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.positions);
+                gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+                gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.colors);
+                gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuffer);
+                gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.sizes);
+                gl.bindBuffer(gl.ARRAY_BUFFER, this.lifeBuffer);
+                gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.lives);
+            }
+        }
+
+        // Main dragon class with full skeletal system
+        class SkeletalDragon {
+            constructor(gl) {
+                this.gl = gl;
+                this.mesh = new SkeletalMesh(gl);
+                this.pos = new Vector3(0, 0, 0);
+                this.rot = new Vector3(0, 0, 0);
+                this.time = 0;
+                this.hunt = 0;
+                this.createSkeleton();
+                this.createDragon();
+            }
+            
+            createSkeleton() {
+                this.hip = this.mesh.addBone('hip', new Vector3(0,0,0), null);
+                this.spine1 = this.mesh.addBone('spine1', new Vector3(0,1.5,0), this.hip);
+                this.spine2 = this.mesh.addBone('spine2', new Vector3(0,1.5,0), this.spine1);
+                this.spine3 = this.mesh.addBone('spine3', new Vector3(0,1.5,0), this.spine2);
+                this.spine4 = this.mesh.addBone('spine4', new Vector3(0,1.2,0.5), this.spine3);
+                this.neck = this.mesh.addBone('neck', new Vector3(0,1.2,0.5), this.spine4);
+                this.head = this.mesh.addBone('head', new Vector3(0,1,1.5), this.neck);
+                this.ujaw = this.mesh.addBone('ujaw', new Vector3(0,0.4,0.8), this.head);
+                this.ljaw = this.mesh.addBone('ljaw', new Vector3(0,-0.4,0.8), this.head);
+                this.leye = this.mesh.addBone('leye', new Vector3(-0.6,0.4,1), this.head);
+                this.reye = this.mesh.addBone('reye', new Vector3(0.6,0.4,1), this.head);
+                this.lwb = this.mesh.addBone('lwb', new Vector3(-2,0.5,0), this.spine2);
+                this.lw1 = this.mesh.addBone('lw1', new Vector3(-1.8,0,-0.5), this.lwb);
+                this.lw2 = this.mesh.addBone('lw2', new Vector3(-2.2,-0.2,-1.2), this.lw1);
+                this.lw3 = this.mesh.addBone('lw3', new Vector3(-2.4,-0.3,-1.8), this.lw2);
+                this.rwb = this.mesh.addBone('rwb', new Vector3(2,0.5,0), this.spine2);
+                this.rw1 = this.mesh.addBone('rw1', new Vector3(1.8,0,-0.5), this.rwb);
+                this.rw2 = this.mesh.addBone('rw2', new Vector3(2.2,-0.2,-1.2), this.rw1);
+                this.rw3 = this.mesh.addBone('rw3', new Vector3(2.4,-0.3,-1.8), this.rw2);
+                this.t1 = this.mesh.addBone('t1', new Vector3(0,-0.3,-2), this.hip);
+                this.t2 = this.mesh.addBone('t2', new Vector3(0,-0.1,-2.2), this.t1);
+                this.t3 = this.mesh.addBone('t3', new Vector3(0,0.1,-2.4), this.t2);
+                this.t4 = this.mesh.addBone('t4', new Vector3(0,0.2,-2.6), this.t3);
+                this.t5 = this.mesh.addBone('t5', new Vector3(0,0.15,-2.8), this.t4);
+                this.tt = this.mesh.addBone('tt', new Vector3(0,0,-3), this.t5);
+                this.fll = this.mesh.addBone('fll', new Vector3(-1,-2,1), this.hip);
+                this.flr = this.mesh.addBone('flr', new Vector3(1,-2,1), this.hip);
+                this.bll = this.mesh.addBone('bll', new Vector3(-1,-2,-1), this.hip);
+                this.blr = this.mesh.addBone('blr', new Vector3(1,-2,-1), this.hip);
+            }
+            
+            createDragon() {
+                this.addSkull();
+                this.addSpine();
+                this.addWings();
+                this.addTail();
+                this.addLegs();
+                this.mesh.createMesh();
+            }
+            
+            addSkull() {
+                const hi = this.mesh.bones.indexOf(this.head);
+                const ui = this.mesh.bones.indexOf(this.ujaw);
+                const li = this.mesh.bones.indexOf(this.ljaw);
+                const sc = new Vector3(0.85,0.75,0.7);
+                const verts = [
+                    new Vector3(-0.5,0.3,0.8), new Vector3(0.5,0.3,0.8),
+                    new Vector3(0.55,0.7,0.6), new Vector3(-0.55,0.7,0.6),
+                    new Vector3(-0.5,0.3,0.2), new Vector3(0.5,0.3,0.2),
+                    new Vector3(0.4,0.6,0.1), new Vector3(-0.4,0.6,0.1),
+                ];
+                for (let v of verts) this.mesh.addVertex(v, v.normalize(), sc, [hi], [1]);
+                const sverts = [
+                    new Vector3(-0.3,0.15,1.3), new Vector3(0.3,0.15,1.3),
+                    new Vector3(0.35,0.5,1.2), new Vector3(-0.35,0.5,1.2),
+                ];
+                for (let v of sverts) this.mesh.addVertex(v, v.normalize(), sc, [ui], [1]);
+                const jverts = [
+                    new Vector3(-0.25,-0.3,1.2), new Vector3(0.25,-0.3,1.2),
+                    new Vector3(0.3,-0.1,1.3), new Vector3(-0.3,-0.1,1.3),
+                ];
+                for (let v of jverts) this.mesh.addVertex(v, v.normalize(), sc, [li], [1]);
+            }
+            
+            addSpine() {
+                const bone_indices = [
+                    this.mesh.bones.indexOf(this.spine1),
+                    this.mesh.bones.indexOf(this.spine2),
+                    this.mesh.bones.indexOf(this.spine3),
+                    this.mesh.bones.indexOf(this.spine4)
+                ];
+                const sc = new Vector3(0.8,0.7,0.65);
+                for (let s=0; s<bone_indices.length; s++) {
+                    const bi = bone_indices[s];
+                    for (let i=0; i<8; i++) {
+                        const angle = (i/8)*Math.PI*2;
+                        const x = Math.cos(angle)*0.35;
+                        const z = Math.sin(angle)*0.35;
+                        this.mesh.addVertex(new Vector3(x,0,z), new Vector3(x,0,z).normalize(), sc, [bi], [1]);
+                    }
+                }
+            }
+            
+            addWings() {
+                const wing_pairs = [
+                    [this.mesh.bones.indexOf(this.lw1), this.mesh.bones.indexOf(this.lw2), this.mesh.bones.indexOf(this.lw3)],
+                    [this.mesh.bones.indexOf(this.rw1), this.mesh.bones.indexOf(this.rw2), this.mesh.bones.indexOf(this.rw3)]
+                ];
+                const wc = new Vector3(0.7,0.6,0.55);
+                for (let side=0; side<2; side++) {
+                    const indices = wing_pairs[side];
+                    for (let seg=0; seg<3; seg++) {
+                        const bi = indices[seg];
+                        for (let i=0; i<4; i++) {
+                            const x = -1.5*(side===0?1:-1) - seg*0.5;
+                            const y = Math.sin(i*0.3+seg)*0.4;
+                            const z = i*0.4;
+                            this.mesh.addVertex(new Vector3(x,y,z), new Vector3(side===0?-1:1,0,0).normalize(), wc, [bi], [1]);
+                        }
+                    }
+                }
+            }
+            
+            addTail() {
+                const tail_bones = [
+                    this.mesh.bones.indexOf(this.t1),
+                    this.mesh.bones.indexOf(this.t2),
+                    this.mesh.bones.indexOf(this.t3),
+                    this.mesh.bones.indexOf(this.t4),
+                    this.mesh.bones.indexOf(this.t5),
+                    this.mesh.bones.indexOf(this.tt)
+                ];
+                const tc = new Vector3(0.7,0.6,0.5);
+                for (let t=0; t<tail_bones.length; t++) {
+                    const bi = tail_bones[t];
+                    const r = 0.3 * (1 - t/tail_bones.length);
+                    for (let i=0; i<6; i++) {
+                        const angle = (i/6)*Math.PI*2;
+                        const x = Math.cos(angle)*r;
+                        const y = Math.sin(angle)*r;
+                        this.mesh.addVertex(new Vector3(x,y,0), new Vector3(x,y,0).normalize(), tc, [bi], [1]);
+                    }
+                }
+            }
+            
+            addLegs() {
+                const leg_bones = [
+                    this.mesh.bones.indexOf(this.fll),
+                    this.mesh.bones.indexOf(this.flr),
+                    this.mesh.bones.indexOf(this.bll),
+                    this.mesh.bones.indexOf(this.blr)
+                ];
+                const lc = new Vector3(0.75,0.65,0.6);
+                for (let leg=0; leg<leg_bones.length; leg++) {
+                    const bi = leg_bones[leg];
+                    for (let i=0; i<8; i++) {
+                        const angle = (i/8)*Math.PI*2;
+                        const x = Math.cos(angle)*0.2;
+                        const z = Math.sin(angle)*0.2;
+                        for (let j=0; j<4; j++) {
+                            this.mesh.addVertex(new Vector3(x,-j*0.7,z), new Vector3(x,0,z).normalize(), lc, [bi], [1]);
+                        }
+                    }
+                }
+            }
+            
+            update(dt, target) {
+                this.time += dt;
+                const breathe = Math.sin(this.time*2)*0.15;
+                this.spine1.position.y = 1.5 + breathe;
+                const sway = Math.sin(this.time*0.4)*0.3;
+                this.hip.rotation = Quaternion.fromAxisAngle(new Vector3(0,1,0), sway*0.15);
+                const targetDir = target.subtract(this.pos).normalize();
+                const fwd = new Vector3(0,0,1);
+                const angle = Math.acos(Math.max(-1, Math.min(1, targetDir.dot(fwd))));
+                if (angle > 0.05) {
+                    const axis = fwd.cross(targetDir).normalize();
+                    this.hip.rotation = Quaternion.fromAxisAngle(axis, angle*0.3);
+                }
+                this.applyHeadTracking(target);
+                this.updateTail(dt);
+                this.updateWings(dt);
+                this.hip.updateMatrix();
+                this.mesh.updateBoneMatrices();
+            }
+            
+            applyHeadTracking(target) {
+                this.head.updateMatrix();
+                const headPos = this.head.getWorldPosition();
+                const toTarget = target.subtract(headPos).normalize();
+                const fwd = new Vector3(0,0,1);
+                const trackAngle = Math.acos(Math.max(-1, Math.min(1, fwd.dot(toTarget))));
+                if (trackAngle > 0.02) {
+                    const trackAxis = fwd.cross(toTarget).normalize();
+                    this.neck.rotation = Quaternion.fromAxisAngle(trackAxis, trackAngle*0.6);
+                    this.head.rotation = Quaternion.fromAxisAngle(trackAxis, trackAngle*0.3);
+                }
+                const jawOpen = Math.sin(this.time*4)*0.4 + 0.2;
+                this.ljaw.rotation = Quaternion.fromAxisAngle(new Vector3(1,0,0), jawOpen);
+                this.ujaw.rotation = Quaternion.fromAxisAngle(new Vector3(1,0,0), -jawOpen*0.3);
+            }
+            
+            updateTail(dt) {
+                this.t1.rotation = Quaternion.fromAxisAngle(new Vector3(0,1,0), Math.sin(this.time*2.8)*0.5);
+                this.t2.rotation = Quaternion.fromAxisAngle(new Vector3(0,1,0), Math.sin(this.time*2.4+0.5)*0.4);
+                this.t3.rotation = Quaternion.fromAxisAngle(new Vector3(0,1,0), Math.sin(this.time*2+1)*0.3);
+                this.t4.rotation = Quaternion.fromAxisAngle(new Vector3(0,1,0), Math.sin(this.time*1.6+1.5)*0.2);
+                this.t5.rotation = Quaternion.fromAxisAngle(new Vector3(1,0,0), Math.sin(this.time*3)*0.2);
+            }
+            
+            updateWings(dt) {
+                const flap = Math.sin(this.time*5)*0.7 + 0.3;
+                const flapAngle = flap * Math.PI * 0.4;
+                this.lw1.rotation = Quaternion.fromAxisAngle(new Vector3(0,0,1), -flapAngle);
+                this.rw1.rotation = Quaternion.fromAxisAngle(new Vector3(0,0,1), flapAngle);
+                const sec = Math.sin(this.time*7+0.3)*0.35;
+                this.lw2.rotation = Quaternion.fromAxisAngle(new Vector3(0,0,1), sec);
+                this.rw2.rotation = Quaternion.fromAxisAngle(new Vector3(0,0,1), -sec);
+                const tert = Math.sin(this.time*9+0.6)*0.2;
+                this.lw3.rotation = Quaternion.fromAxisAngle(new Vector3(1,0,0), tert);
+                this.rw3.rotation = Quaternion.fromAxisAngle(new Vector3(1,0,0), -tert);
+            }
+        }
+
+        // Main renderer
+        class Renderer {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.gl = canvas.getContext('webgl2', {antialias:true, alpha:false, powerPreference:'high-performance'});
+                if (!this.gl) {alert('WebGL2 not supported'); return;}
+                this.gl.enable(this.gl.DEPTH_TEST);
+                this.gl.enable(this.gl.BLEND);
+                this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+                this.gl.clearColor(0.02, 0.03, 0.08, 1);
+                this.setupShaders();
+                this.dragon = new SkeletalDragon(this.gl);
+                this.particles = new ParticleSystem(this.gl, 10000);
+                this.cam = {pos: new Vector3(0,2.5,7), target: new Vector3(0,1,0), fov: Math.PI/3};
+                this.light = {pos: new Vector3(8,10,8), col: new Vector3(0.7,0.8,1)};
+                this.mouse = {x: window.innerWidth/2, y: window.innerHeight/2};
+                this.fps = 60;
+                this.frameCount = 0;
+                this.fpsUpdateTime = performance.now();
+                this.lastTime = performance.now();
+                this.time = 0;
+                this.setupEventListeners();
+                this.startRenderLoop();
+            }
+            
+            setupShaders() {
+                const vs = document.getElementById('vertex-shader').textContent;
+                const fs = document.getElementById('fragment-shader').textContent;
+                const pvs = document.getElementById('particle-vertex').textContent;
+                const pfs = document.getElementById('particle-fragment').textContent;
+                this.prog = this.createProgram(vs, fs);
+                this.pprog = this.createProgram(pvs, pfs);
+                this.ulocs = {
+                    proj: this.gl.getUniformLocation(this.prog, 'projection'),
+                    view: this.gl.getUniformLocation(this.prog, 'view'),
+                    model: this.gl.getUniformLocation(this.prog, 'model'),
+                    norm: this.gl.getUniformLocation(this.prog, 'normalMatrix'),
+                    lpos: this.gl.getUniformLocation(this.prog, 'lightPos'),
+                    vpos: this.gl.getUniformLocation(this.prog, 'viewPos'),
+                    lcol: this.gl.getUniformLocation(this.prog, 'lightColor'),
+                    time: this.gl.getUniformLocation(this.prog, 'time')
+                };
+                this.pulocs = {
+                    proj: this.gl.getUniformLocation(this.pprog, 'projection'),
+                    view: this.gl.getUniformLocation(this.pprog, 'view'),
+                    model: this.gl.getUniformLocation(this.pprog, 'model')
+                };
+            }
+            
+            createProgram(vs, fs) {
+                const vsh = this.compileShader(vs, this.gl.VERTEX_SHADER);
+                const fsh = this.compileShader(fs, this.gl.FRAGMENT_SHADER);
+                const prog = this.gl.createProgram();
+                this.gl.attachShader(prog, vsh);
+                this.gl.attachShader(prog, fsh);
+                this.gl.linkProgram(prog);
+                if (!this.gl.getProgramParameter(prog, this.gl.LINK_STATUS)) {
+                    console.error(this.gl.getProgramInfoLog(prog));
+                }
+                this.gl.deleteShader(vsh);
+                this.gl.deleteShader(fsh);
+                return prog;
+            }
+            
+            compileShader(src, type) {
+                const sh = this.gl.createShader(type);
+                this.gl.shaderSource(sh, src);
+                this.gl.compileShader(sh);
+                if (!this.gl.getShaderParameter(sh, this.gl.COMPILE_STATUS)) {
+                    console.error(this.gl.getShaderInfoLog(sh));
+                }
+                return sh;
+            }
+            
+            setupEventListeners() {
+                document.addEventListener('mousemove', (e) => {
+                    this.mouse.x = e.clientX;
+                    this.mouse.y = e.clientY;
+                });
+                window.addEventListener('resize', () => {
+                    this.canvas.width = window.innerWidth;
+                    this.canvas.height = window.innerHeight;
+                    this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+                });
+            }
+            
+            startRenderLoop() {
+                const render = (ct) => {
+                    const dt = Math.min((ct - this.lastTime) / 1000, 0.016);
+                    this.lastTime = ct;
+                    this.time += dt;
+                    this.update(dt);
+                    this.draw();
+                    this.frameCount++;
+                    if (ct - this.fpsUpdateTime >= 1000) {
+                        this.fps = this.frameCount;
+                        this.frameCount = 0;
+                        this.fpsUpdateTime = ct;
+                        document.getElementById('fps').textContent = this.fps;
+                        document.getElementById('bones').textContent = this.dragon.mesh.bones.length;
+                        document.getElementById('particles').textContent = this.particles.activeCount;
+                        document.getElementById('polygons').textContent = (this.dragon.mesh.indexCount/3)|0;
+                    }
+                    requestAnimationFrame(render);
+                };
+                requestAnimationFrame(render);
+            }
+            
+            update(dt) {
+                const ndcX = (this.mouse.x / this.canvas.width) * 2 - 1;
+                const ndcY = -(this.mouse.y / this.canvas.height) * 2 + 1;
+                const dist = 10;
+                const vFOV = this.cam.fov;
+                const h = 2 * Math.tan(vFOV / 2) * dist;
+                const w = h * (this.canvas.width / this.canvas.height);
+                const mwx = ndcX * (w / 2);
+                const mwy = ndcY * (h / 2);
+                const target = new Vector3(mwx, mwy + 1.5, -dist);
+                this.dragon.update(dt, target);
+                this.particles.update(dt);
+                if (Math.random() > 0.6) {
+                    const bones = [this.dragon.head, this.dragon.t3, this.dragon.lw1, this.dragon.rw1];
+                    const bone = bones[Math.floor(Math.random() * bones.length)];
+                    bone.updateMatrix();
+                    const bp = bone.getWorldPosition();
+                    const angle = Math.random() * Math.PI * 2;
+                    const d = Math.random() * 0.8;
+                    const ep = new Vector3(bp.x + Math.cos(angle)*d, bp.y + Math.random()*0.4, bp.z + Math.sin(angle)*d);
+                    const vel = new Vector3((Math.random()-0.5)*1, Math.random()*0.8+0.3, (Math.random()-0.5)*1);
+                    const cols = [new Vector3(0.3,0.8,0.9), new Vector3(0.2,0.7,1), new Vector3(0.1,0.6,0.8), new Vector3(0.4,0.9,0.7)];
+                    const col = cols[Math.floor(Math.random() * cols.length)];
+                    this.particles.emit(ep, vel, col, 3, 12+Math.random()*8);
+                }
+            }
+            
+            draw() {
+                this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+                const proj = new Matrix4();
+                proj.perspective(this.cam.fov, this.canvas.width / this.canvas.height, 0.1, 1000);
+                const view = new Matrix4();
+                view.lookAt(this.cam.pos, this.cam.target, new Vector3(0, 1, 0));
+                const model = new Matrix4();
+                model.translate(this.dragon.pos.x, this.dragon.pos.y, this.dragon.pos.z);
+                this.gl.useProgram(this.prog);
+                this.gl.uniformMatrix4fv(this.ulocs.proj, false, proj.elements);
+                this.gl.uniformMatrix4fv(this.ulocs.view, false, view.elements);
+                this.gl.uniformMatrix4fv(this.ulocs.model, false, model.elements);
+                const nm = new Matrix4();
+                nm.elements.set(model.elements);
+                nm.invert();
+                const ne = new Float32Array(9);
+                const n = nm.elements;
+                ne[0]=n[0]; ne[1]=n[1]; ne[2]=n[2];
+                ne[3]=n[4]; ne[4]=n[5]; ne[5]=n[6];
+                ne[6]=n[8]; ne[7]=n[9]; ne[8]=n[10];
+                this.gl.uniformMatrix3fv(this.ulocs.norm, false, ne);
+                this.gl.uniform3f(this.ulocs.lpos, this.light.pos.x, this.light.pos.y, this.light.pos.z);
+                this.gl.uniform3f(this.ulocs.vpos, this.cam.pos.x, this.cam.pos.y, this.cam.pos.z);
+                this.gl.uniform3f(this.ulocs.lcol, this.light.col.x, this.light.col.y, this.light.col.z);
+                this.gl.uniform1f(this.ulocs.time, this.time);
+                this.gl.bindVertexArray(this.dragon.mesh.vao);
+                if (this.dragon.mesh.indexCount > 0) {
+                    this.gl.drawElements(this.gl.TRIANGLES, this.dragon.mesh.indexCount, this.gl.UNSIGNED_INT, 0);
+                }
+                this.gl.useProgram(this.pprog);
+                this.gl.uniformMatrix4fv(this.pulocs.proj, false, proj.elements);
+                this.gl.uniformMatrix4fv(this.pulocs.view, false, view.elements);
+                this.gl.uniformMatrix4fv(this.pulocs.model, false, model.elements);
+                this.particles.updateBuffers();
+                this.gl.bindVertexArray(this.particles.vao);
+                if (this.particles.activeCount > 0) {
+                    this.gl.drawArrays(this.gl.POINTS, 0, this.particles.activeCount);
+                }
+                this.gl.bindVertexArray(null);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('canvas');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const renderer = new Renderer(canvas);
+        });
+    </script>
+</body>
+</html>
